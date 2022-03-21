@@ -1,45 +1,57 @@
 import Head from 'next/head'
 import Image from 'next/image'
-import styles from '../styles/Home.module.css'
-import { getContactsCached, getContactCached } from '../util/bizzaboClient'
+import MuiTable from '../components/MuiTable';
+import { getContactsCached } from '../util/bizzaboClient'
 
-export default function AppPage({ data }) {
+export default function AppPage({ items, cells }) {
   return (
-    <div className={styles.container}>
+    <div>
       <Head>
         <title>Ice Breaker</title>
         <meta name="description" content="Meet new people and break the ice" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Break that Ice!
-        </h1>
-        <div>
-        { JSON.stringify(data.content)}
-        </div>
-      </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+      <div className="container">
+        {items.length > 0 ? (
+          <MuiTable cells={cells} items={items} />
+        ) : (<Image src='https://img.mako.co.il/2015/06/11/la_09_i.jpg' layout='fill' />)}
+      </div>
     </div>
   )
 }
 
 export async function getServerSideProps({ query }) {
-    const contacts = await getContactsCached(parseInt(query.accountId), parseInt(query.eventId));
-    const contact = await getContactCached(parseInt(query.accountId), parseInt(query.eventId), parseInt(query.userId));
+  const cells = ['Name', 'Company / Title', 'Summary'];
+  let props = { items: [], cells };
+  if (query && query.accountId && query.eventId && query.userEmail) {
+    const contactsData = await getContactsCached(parseInt(query.accountId), parseInt(query.eventId));
+    const contactsWithProps = contactsData.content.map(contact => ({ id: contact.id, eventId: contact.eventId, ...contact.properties }));
 
-    return { props: { data: contacts } }
+    const currentUser = extractContact(contactsWithProps, query.userEmail);
+    console.log(currentUser);
+    let attendees = [];
+    if (currentUser && false) {
+      attendees = matches(currentUser, contactsWithProps);
+    } else {
+      attendees = pickRandom(contactsWithProps);
+    }
+
+    props.items = attendees;
+
+  }
+  return { props }
+}
+
+function extractContact(contacts, userEmail) {
+  return contacts.filter(contact => contact.email === userEmail).pop()
+}
+
+function matcher(user, otherUsers, amount = 10) {
+
+}
+
+function pickRandom(otherUsers, amount = 10) {
+  const shuffled = otherUsers.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, amount);
 }
